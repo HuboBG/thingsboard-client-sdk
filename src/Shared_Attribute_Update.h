@@ -12,7 +12,8 @@ static constexpr char SHARED_ATTRIBUTE_UPDATE_SUBSCRIPTIONS[] = "shared attribut
 
 // --- Topic format (deviceId injected at runtime) ---
 // TB default (for reference): "v1/devices/me/attributes"
-static constexpr char ATTRIBUTE_TOPIC_FMT[] = "sensor/%s/attributes";
+// static constexpr char ATTRIBUTE_TOPIC_FMT[] = "sensor/%s/attributes";
+static constexpr char ATTRIBUTE_TOPIC_FMT[] = "sensor/%s/sattrs";
 
 #if THINGSBOARD_ENABLE_DYNAMIC
 template <typename Logger = DefaultLogger>
