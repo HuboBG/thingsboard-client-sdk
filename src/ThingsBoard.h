@@ -708,8 +708,11 @@ class ThingsBoardSized {
     /// @param payload Payload that was sent over the cloud and received over the given topic
     /// @param length Total length of the received payload
     void onMQTTMessage(char * topic, uint8_t * payload, unsigned int length) {
+
 #if THINGSBOARD_ENABLE_DEBUG
         Logger::printfln(RECEIVE_MESSAGE, length, topic);
+        Serial.print("[TB] MQTT Response: " + String(topic) + " - ");
+        Serial.println(String((const char*)payload).substring(0, length));
 #endif // THINGSBOARD_ENABLE_DEBUG
 
 #if THINGSBOARD_ENABLE_STL
@@ -787,6 +790,8 @@ class ThingsBoardSized {
         // See https://arduinojson.org/v6/doc/deserialization/ for more info on ArduinoJson deserialization
         DeserializationError const error = deserializeJson(json_buffer, payload, length);
         if (error) {
+            Serial.print("Invalid JSON payload: ");
+            Serial.println(String((const char*)payload).substring(0, length));
             Logger::printfln(UNABLE_TO_DE_SERIALIZE_JSON, error.c_str());
             return;
         }

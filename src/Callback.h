@@ -59,6 +59,7 @@ class Callback {
     /// we instead return a defaulted instance of the requested return variable
     return_typ Call_Callback(argument_types const &... arguments) const {
         if (!m_callback) {
+            Serial.println("No Callback function available");
           return return_typ();
         }
         return m_callback(arguments...);

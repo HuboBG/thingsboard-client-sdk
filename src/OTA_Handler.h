@@ -79,6 +79,9 @@ class OTA_Handler {
         m_fw_callback = &fw_callback;
         m_fw_size = fw_size;
         m_total_chunks = (m_fw_size / m_fw_callback->Get_Chunk_Size()) + 1U;
+
+        Serial.println("Start_Firmware_Update :: Chunk size: " + String(m_fw_size) + ", Total chunks : " + String(m_total_chunks));
+
         (void)strncpy(m_fw_checksum, fw_checksum, sizeof(m_fw_checksum));
         m_fw_checksum_algorithm = fw_checksum_algorithm;
         m_fw_updater = m_fw_callback->Get_Updater();
@@ -90,6 +93,8 @@ class OTA_Handler {
     /// Be aware the written partition is not erased so the already written binary firmware data still remains in the flash partition,
     /// shouldn't really matter, because if we start the update process again the partition will be overwritten anyway and a partially written firmware will not be bootable
     void Stop_Firmware_Update()  {
+        Serial.println("Stop_Firmware_Update called");
+
         m_watchdog.detach();
         m_fw_updater->reset();
         Logger::printfln(FW_UPDATE_ABORTED);
@@ -103,6 +108,8 @@ class OTA_Handler {
     /// @param payload Firmware packet data of the current chunk
     /// @param total_bytes Amount of bytes in the current firmware packet data
     void Process_Firmware_Packet(size_t const & current_chunk, uint8_t * payload, size_t const & total_bytes)  {
+        Serial.println("Process_Firmware_Packet called: " + String(current_chunk) + ", total_bytes: " + String(total_bytes));
+
         if (current_chunk != m_requested_chunks) {
             Logger::printfln(RECEIVED_UNEXPECTED_CHUNK, current_chunk, m_requested_chunks);
             return;
@@ -170,6 +177,8 @@ class OTA_Handler {
     /// @param expected_chunk_size Variable the expected chunk size for the currently requested chunk will be copied into
     /// @return Whether the received chunk has the expected size or not
     bool Received_Valid_Chunk_Size(size_t const & received_chunk_size, size_t & expected_chunk_size) {
+        Serial.println("Received_Valid_Chunk_Size called");
+
         bool const is_last_chunk = m_requested_chunks + 1 >= m_total_chunks;
         if (is_last_chunk) {
             size_t const last_chunk_expected_size = m_fw_size % m_fw_callback->Get_Chunk_Size();
@@ -182,6 +191,8 @@ class OTA_Handler {
 
     /// @brief Restarts or starts the firmware update and its needed components and then requests the first firmware chunk
     void Request_First_Firmware_Packet()  {
+        Serial.println("Request_First_Firmware_Packet called");
+
         m_requested_chunks = 0U;
         m_retries = m_fw_callback->Get_Chunk_Retries();
         // Hash start result is ignored, because it can only fail if the input parameters are invalid
@@ -194,9 +205,11 @@ class OTA_Handler {
     /// @brief Requests the next firmware chunk of the OTA firmware if there are any left
     /// and starts the timer that ensures we request the same chunk again if we have not received a response yet
     void Request_Next_Firmware_Packet()  {
+        Serial.println("Request_Next_Firmware_Packet called");
+
         // Check if we have already requested and handled the last remaining chunk
         if (m_requested_chunks >= m_total_chunks) {
-            Finish_Firmware_Update();   
+            Finish_Firmware_Update();
             return;
         }
 
@@ -215,6 +228,8 @@ class OTA_Handler {
     /// both should be the same and if that is not the case that means that we received invalid firmware binary data and have to restart the update.
     /// If checking the hash was successfull we attempt to finish flashing the ota partition and then inform the user that the update was successfull
     void Finish_Firmware_Update()  {
+        Serial.println("Finish_Firmware_Update called");
+
         (void)m_send_fw_state_callback.Call_Callback(FW_STATE_DOWNLOADED, "");
 
         char calculated_checksum[FIRMWARE_HASH_SIZE] = {};
@@ -252,6 +267,8 @@ class OTA_Handler {
     /// @param failure_response Possible response to a failure that the method should handle
     /// @param error_message Error message that should be printed if we abort the update
     void Handle_Failure(OTA_Failure_Response const & failure_response, char const * error_message)  {
+        Serial.println("Handle_Failure called");
+
         if (m_retries <= 0) {
             (void)m_send_fw_state_callback.Call_Callback(FW_STATE_FAILED, error_message);
             m_fw_callback->Call_Callback(false);
@@ -283,6 +300,8 @@ class OTA_Handler {
 
     /// @brief Callback that will be called if we did not receive the firmware chunk response in the given timeout time
     void Handle_Request_Timeout()  {
+        Serial.println("Handle_Request_Timeout called");
+
         uint64_t const & timeout = m_fw_callback->Get_Timeout();
         char message[Helper::detectSize(CHUNK_REQUEST_TIMED_OUT, m_requested_chunks, timeout)] = {};
         (void)snprintf(message, sizeof(message), CHUNK_REQUEST_TIMED_OUT, m_requested_chunks, timeout);

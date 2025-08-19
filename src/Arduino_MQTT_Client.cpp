@@ -3,68 +3,82 @@
 
 #ifdef ARDUINO
 
-Arduino_MQTT_Client::Arduino_MQTT_Client(Client & transport_client) :
+Arduino_MQTT_Client::Arduino_MQTT_Client(Client& transport_client) :
     m_connected_callback(),
     m_mqtt_client(transport_client)
 {
     // Nothing to do
 }
 
-void Arduino_MQTT_Client::set_client(Client & transport_client) {
+void Arduino_MQTT_Client::set_client(Client& transport_client)
+{
     m_mqtt_client.setClient(transport_client);
 }
 
-void Arduino_MQTT_Client::set_data_callback(Callback<void, char *, uint8_t *, unsigned int>::function callback) {
+void Arduino_MQTT_Client::set_data_callback(Callback<void, char*, uint8_t*, unsigned int>::function callback)
+{
     m_mqtt_client.setCallback(callback);
 }
 
-void Arduino_MQTT_Client::set_connect_callback(Callback<void>::function callback) {
+void Arduino_MQTT_Client::set_connect_callback(Callback<void>::function callback)
+{
     m_connected_callback.Set_Callback(callback);
 }
 
-bool Arduino_MQTT_Client::set_buffer_size(uint16_t receive_buffer_size, uint16_t send_buffer_size) {
+bool Arduino_MQTT_Client::set_buffer_size(uint16_t receive_buffer_size, uint16_t send_buffer_size)
+{
     return m_mqtt_client.setBufferSize(receive_buffer_size, send_buffer_size);
 }
 
-uint16_t Arduino_MQTT_Client::get_receive_buffer_size() {
+uint16_t Arduino_MQTT_Client::get_receive_buffer_size()
+{
     return m_mqtt_client.getReceiveBufferSize();
 }
 
-uint16_t Arduino_MQTT_Client::get_send_buffer_size() {
+uint16_t Arduino_MQTT_Client::get_send_buffer_size()
+{
     return m_mqtt_client.getSendBufferSize();
 }
 
-void Arduino_MQTT_Client::set_server(char const * domain, uint16_t port) {
+void Arduino_MQTT_Client::set_server(char const* domain, uint16_t port)
+{
     m_mqtt_client.setServer(domain, port);
 }
 
-bool Arduino_MQTT_Client::connect(char const * client_id, char const * user_name, char const * password) {
+bool Arduino_MQTT_Client::connect(char const* client_id, char const* user_name, char const* password)
+{
     bool const result = m_mqtt_client.connect(client_id, user_name, password);
     m_connected_callback.Call_Callback();
     return result;
 }
 
-void Arduino_MQTT_Client::disconnect() {
+void Arduino_MQTT_Client::disconnect()
+{
     m_mqtt_client.disconnect();
 }
 
-bool Arduino_MQTT_Client::loop() {
+bool Arduino_MQTT_Client::loop()
+{
     return m_mqtt_client.loop();
 }
 
-bool Arduino_MQTT_Client::publish(char const * topic, uint8_t const * payload, size_t const & length) {
+bool Arduino_MQTT_Client::publish(char const* topic, uint8_t const* payload, size_t const& length)
+{
     return m_mqtt_client.publish(topic, payload, length, false);
 }
 
-bool Arduino_MQTT_Client::subscribe(char const * topic) {
+bool Arduino_MQTT_Client::subscribe(char const* topic)
+{
     return m_mqtt_client.subscribe(topic);
 }
 
-bool Arduino_MQTT_Client::unsubscribe(char const * topic) {
+bool Arduino_MQTT_Client::unsubscribe(char const* topic)
+{
     return m_mqtt_client.unsubscribe(topic);
 }
 
-bool Arduino_MQTT_Client::connected() {
+bool Arduino_MQTT_Client::connected()
+{
     return m_mqtt_client.connected();
 }
 

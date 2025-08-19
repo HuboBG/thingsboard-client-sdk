@@ -27,6 +27,7 @@ char constexpr RPC_METHOD_KEY[] = "method";
 char constexpr RPC_PARAMS_KEY[] = "params";
 // Shared attribute update API topics.
 char constexpr ATTRIBUTE_TOPIC[] = "v1/devices/me/attributes";
+
 // Shared attribute request keys.
 char constexpr SHARED_RESPONSE_KEY[] = "shared";
 // Publish data topics.
@@ -34,8 +35,10 @@ char constexpr TELEMETRY_TOPIC[] = "v1/devices/me/telemetry";
 
 
 /// @brief Base functionality required by all API implementation
-class IAPI_Implementation {
-  public:
+class IAPI_Implementation
+{
+public:
+    virtual ~IAPI_Implementation() = default;
     /// @brief Returns the way the server response should be processed.
     /// Only ever uses one at the time, because the response is either unserialized data which we need to process as such (OTA Firmware Update)
     /// or actually JSON which needs to be serialized (everything else)
@@ -47,13 +50,13 @@ class IAPI_Implementation {
     /// @param topic Previously subscribed topic, we got the response over
     /// @param payload Payload that was sent over the cloud and received over the given topic
     /// @param length Total length of the received payload
-    virtual void Process_Response(char const * topic, uint8_t * payload, unsigned int length) = 0;
+    virtual void Process_Response(char const* topic, uint8_t* payload, unsigned int length) = 0;
 
     /// @brief Process callback that will be called upon response arrival
     /// and is responsible for handling the alredy serialized payload and calling the appropriate previously subscribed callbacks
     /// @param topic Previously subscribed topic, we got the response over
     /// @param data Payload sent by the server over our given topic, that contains our key value pairs
-    virtual void Process_Json_Response(char const * topic, JsonDocument const & data) = 0;
+    virtual void Process_Json_Response(char const* topic, JsonDocument const& data) = 0;
 
     /// @brief Compares received response topic and the topic this api implementation handles responses on,
     /// messages from all other topics are ignored and only messages from topics that match are handled.
@@ -61,7 +64,7 @@ class IAPI_Implementation {
     /// Example being shared attribute update (v1/devices/me/attributes) or we compare only before the null termination for topics that include additional parameters in the response.
     /// Like for example the original request id in the response of the attribute request (v1/devices/me/attributes/response/1)
     /// @return Whether the received response topic matches the topic this api implementation handles responses on
-    virtual bool Compare_Response_Topic(char const * topic) const = 0;
+    virtual bool Compare_Response_Topic(char const* topic) const = 0;
 
     /// @brief Unsubcribes all callbacks, to clear up any ongoing subscriptions and stop receiving information over the previously subscribed topic
     /// @return Whether unsubcribing all the previously subscribed callbacks
@@ -86,6 +89,12 @@ class IAPI_Implementation {
     /// in this method instead, because it ensures all member methods are instantiated already
     virtual void Initialize() = 0;
 
+    // NIMA CHANGES
+    virtual void SetDeviceID(char const* device_id) = 0;
+
+    // NIMA CHANGES
+    virtual void SetDeviceAccessToken(char const* access_token) = 0;
+
     /// @brief Sets the underlying callbacks that are required for the different API Implementation to communicate with the cloud.
     /// Directly set by the used ThingsBoard client to its internal methods, therefore calling again and overriding
     /// as a user ist not recommended, unless you know what you are doing
@@ -98,7 +107,17 @@ class IAPI_Implementation {
     /// @param get_send_size_callback Method which allows to get the current underlying send size of the buffer, points to m_client.get_send_buffer_size per default
     /// @param set_buffer_size_callback Method which allows to set the current underlying size of the buffer, points to m_client.set_buffer_size per default
     /// @param get_request_id_callback Method which allows to get the current request id as a mutable reference, points to getRequestID per default
-    virtual void Set_Client_Callbacks(Callback<void, IAPI_Implementation &>::function subscribe_api_callback, Callback<bool, char const * const, JsonDocument const &, size_t const &>::function send_json_callback, Callback<bool, char const * const, char const * const>::function send_json_string_callback, Callback<bool, char const * const>::function subscribe_topic_callback, Callback<bool, char const * const>::function unsubscribe_topic_callback, Callback<uint16_t>::function get_receive_size_callback, Callback<uint16_t>::function get_send_size_callback, Callback<bool, uint16_t, uint16_t>::function set_buffer_size_callback, Callback<size_t *>::function get_request_id_callback) = 0;
+    virtual void Set_Client_Callbacks(Callback<void, IAPI_Implementation&>::function subscribe_api_callback,
+                                      Callback<bool, char const* const, JsonDocument const&, size_t const&>::function
+                                      send_json_callback,
+                                      Callback<bool, char const* const, char const* const>::function
+                                      send_json_string_callback,
+                                      Callback<bool, char const* const>::function subscribe_topic_callback,
+                                      Callback<bool, char const* const>::function unsubscribe_topic_callback,
+                                      Callback<uint16_t>::function get_receive_size_callback,
+                                      Callback<uint16_t>::function get_send_size_callback,
+                                      Callback<bool, uint16_t, uint16_t>::function set_buffer_size_callback,
+                                      Callback<size_t*>::function get_request_id_callback) = 0;
 };
 
 #endif // IAPI_Implementation_h
