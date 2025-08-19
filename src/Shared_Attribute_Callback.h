@@ -16,8 +16,9 @@
 /// Be aware though the size set in this template and the size passed to the ThingsBoard MaxAttributes template need to be the same or the value in this class lower, if not some of the requested keys may be lost, default = Default_Attributes_Amount (5)
 template <size_t MaxAttributes = Default_Attributes_Amount>
 #endif // !THINGSBOARD_ENABLE_DYNAMIC
-class Shared_Attribute_Callback : public Callback<void, JsonObjectConst const &>  {
-  public:
+class Shared_Attribute_Callback : public Callback<void, JsonObjectConst const&>
+{
+public:
     /// @brief Constructs empty callback, will result in never being called. Internals are simply default constructed as nullptr
     Shared_Attribute_Callback() = default;
 
@@ -35,10 +36,10 @@ class Shared_Attribute_Callback : public Callback<void, JsonObjectConst const &>
     /// @tparam ...Args Holds the multiple arguments that will simply be forwarded to the vector constructor and therefore allow to use every overloaded vector constructor without having to implement them
     /// @param callback Callback method that will be called upon data arrival with the given data that was received serialized into a JsonDocument
     /// @param ...args Arguments that will be forwarded into the overloaded vector constructor see https://en.cppreference.com/w/cpp/container/vector/vector for more information
-    template<typename... Args>
-    Shared_Attribute_Callback(function callback, Args const &... args)
-      : Callback(callback)
-      , m_attributes(args...)
+    template <typename... Args>
+    Shared_Attribute_Callback(function callback, Args const&... args)
+        : Callback(callback)
+          , m_attributes(args...)
     {
         // Nothing to do
     }
@@ -48,9 +49,12 @@ class Shared_Attribute_Callback : public Callback<void, JsonObjectConst const &>
     /// with their current value they have been changed to
     /// @return Subscribed shared attributes
 #if THINGSBOARD_ENABLE_DYNAMIC
-    Vector<char const *> const & Get_Attributes() const {
+    Vector<char const*> const& Get_Attributes() const
+    {
+
 #else
-    Array<char const *, MaxAttributes> const & Get_Attributes() const {
+    Array<char const*, MaxAttributes> const& Get_Attributes() const
+    {
 #endif // THINGSBOARD_ENABLE_DYNAMIC
         return m_attributes;
     }
@@ -68,16 +72,18 @@ class Shared_Attribute_Callback : public Callback<void, JsonObjectConst const &>
     /// The last option is a copy assign method where we pass a vector and the values of that vector will be copied into our buffer
     /// @tparam ...Args Holds the multiple arguments that will simply be forwarded to the vector assign method and therefore allow to use every overloaded vector assign without having to implement them
     /// @param ...args Arguments that will be forwarded into the overloaded vector assign method see https://en.cppreference.com/w/cpp/container/vector/assign for more information
-    template<typename... Args>
-    void Set_Attributes(Args const &... args) {
+    template <typename... Args>
+    void Set_Attributes(Args const&... args)
+    {
         m_attributes.assign(args...);
     }
 
-  private:
+private:
 #if THINGSBOARD_ENABLE_DYNAMIC
-    Vector<char const *>                 m_attributes = {}; // Shared attribute we want to subscribe to receive a message if they change
+    Vector<char const*> m_attributes = {}; // Shared attribute we want to subscribe to receive a message if they change
 #else
-    Array<char const *, MaxAttributes>   m_attributes = {}; // Shared attribute we want to subscribe to receive a message if they change
+    Array<char const*, MaxAttributes> m_attributes = {};
+    // Shared attribute we want to subscribe to receive a message if they change
 #endif // THINGSBOARD_ENABLE_DYNAMIC
 };
 

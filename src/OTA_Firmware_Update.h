@@ -47,7 +47,9 @@ static constexpr char DOWNLOADING_FW[] = "Attempting to download over MQTT...";
 #endif
 
 // ---- MQTT topic formats (runtime-built from device access token) ----
-static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/%s/%s/%s/chunk/%u"; // token/title/version/chunk
+// static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/%s/%s/%s/chunk/%u"; // token/title/version/chunk
+static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/%s/%s/chunk/%u"; // title/version/chunk
+
 static constexpr char FW_RESPONSE_SUBSCRIBE_FMT[] = "v3/fw/response/%s/chunk/+";
 static constexpr char FW_RESPONSE_PREFIX_FMT[] = "v3/fw/response/%s/chunk/";
 
@@ -102,10 +104,11 @@ template <typename Logger = DefaultLogger>
 class OTA_Firmware_Update final : public IAPI_Implementation
 {
 public:
-    explicit OTA_Firmware_Update(const char* deviceToken)
+    OTA_Firmware_Update()
         : c_fw_title(nullptr)
           , c_fw_version(nullptr)
-          , m_deviceToken(deviceToken)
+          , m_deviceId(nullptr)
+          , m_deviceToken(nullptr)
 #if THINGSBOARD_ENABLE_STL
           , m_ota(std::bind(&OTA_Firmware_Update::Publish_Chunk_Request, this,
                             std::placeholders::_1, std::placeholders::_2),
@@ -121,20 +124,27 @@ public:
 #if !THINGSBOARD_ENABLE_STL
         m_subscribedInstance = nullptr;
 #endif
-
-        Serial.println("device token: " + String(m_deviceToken));
     }
 
     // ---------- identity setters ----------
-    void SetDeviceID(char const* /*device_id*/) override
+    void SetDeviceID(char const* device_id) override
     {
-        // Not used in v3 firmware API; kept to satisfy interface.
+        m_deviceId = device_id;
+        Serial.println("SetDeviceID: " + String(m_deviceId));
+
+        // forward to inner helpers so they can build topics like sensor/<id>/attributes
+        m_fw_attribute_update.SetDeviceID(device_id);
+        m_fw_attribute_request.SetDeviceID(device_id);
     }
 
     void SetDeviceAccessToken(char const* token) override
     {
         m_deviceToken = token;
-        Serial.println("setDeviceAccessToken: " + String(token));
+        Serial.println("SetDeviceAccessToken: " + String(token));
+
+        // forward token as well (kept for future use / symmetry)
+        m_fw_attribute_update.SetDeviceAccessToken(token);
+        m_fw_attribute_request.SetDeviceAccessToken(token);
     }
 
     // Expose firmware identity captured from attributes
@@ -326,11 +336,11 @@ private:
     {
         Serial.println("Prepare_Firmware_Settings");
 
-        if (Helper::stringIsNullorEmpty(m_deviceToken))
+        /*if (Helper::stringIsNullorEmpty(m_deviceToken))
         {
             Logger::printfln("Device access token not set");
             return false;
-        }
+        }*/
 
         char const* current_fw_title = callback.Get_Firmware_Title();
         char const* current_fw_version = callback.Get_Firmware_Version();
@@ -396,11 +406,11 @@ private:
         (void)request_id; // v3 token-based API doesn't use request_id in the topic
         Serial.println("Publish_Chunk_Request");
 
-        if (Helper::stringIsNullorEmpty(m_deviceToken) ||
+        if (Helper::stringIsNullorEmpty(m_deviceId) ||
             Helper::stringIsNullorEmpty(c_fw_title) ||
             Helper::stringIsNullorEmpty(c_fw_version))
         {
-            Logger::printfln("Missing token/title/version for chunk request");
+            Logger::printfln("Missing device_id/title/version for chunk request");
             return false;
         }
 
@@ -409,10 +419,10 @@ private:
         char sizeStr[Helper::detectSize(NUMBER_PRINTF, chunk_size)] = {};
         (void)snprintf(sizeStr, sizeof(sizeStr), NUMBER_PRINTF, chunk_size);
 
-        char topic[Helper::detectSize(FIRMWARE_REQUEST_FMT, m_deviceToken, c_fw_title, c_fw_version,
+        char topic[Helper::detectSize(FIRMWARE_REQUEST_FMT, m_deviceId, c_fw_title, c_fw_version,
                                       static_cast<unsigned>(request_chunk))] = {};
         (void)snprintf(topic, sizeof(topic), FIRMWARE_REQUEST_FMT,
-                       m_deviceToken, c_fw_title, c_fw_version,
+                       m_deviceId, c_fw_title, c_fw_version,
                        static_cast<unsigned>(request_chunk));
 
         return m_send_json_string_callback.Call_Callback(topic, sizeStr);
@@ -534,17 +544,17 @@ private:
     // Returns needed size including NUL when out==nullptr
     size_t Build_Response_Subscribe(char* out, const size_t outLen) const
     {
-        char const* token = m_deviceToken && *m_deviceToken ? m_deviceToken : "unknown";
-        const int need = snprintf(nullptr, 0, FW_RESPONSE_SUBSCRIBE_FMT, token) + 1;
-        if (out && outLen) { (void)snprintf(out, outLen, FW_RESPONSE_SUBSCRIBE_FMT, token); }
+        char const* deviceId = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
+        const int need = snprintf(nullptr, 0, FW_RESPONSE_SUBSCRIBE_FMT, deviceId) + 1;
+        if (out && outLen) { (void)snprintf(out, outLen, FW_RESPONSE_SUBSCRIBE_FMT, deviceId); }
         return static_cast<size_t>(need);
     }
 
     size_t Build_Response_Prefix(char* out, const size_t outLen) const
     {
-        char const* token = m_deviceToken && *m_deviceToken ? m_deviceToken : "unknown";
-        const int need = snprintf(nullptr, 0, FW_RESPONSE_PREFIX_FMT, token) + 1;
-        if (out && outLen) { (void)snprintf(out, outLen, FW_RESPONSE_PREFIX_FMT, token); }
+        char const* deviceId = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
+        const int need = snprintf(nullptr, 0, FW_RESPONSE_PREFIX_FMT, deviceId) + 1;
+        if (out && outLen) { (void)snprintf(out, outLen, FW_RESPONSE_PREFIX_FMT, deviceId); }
         return static_cast<size_t>(need);
     }
 
@@ -597,6 +607,7 @@ private:
     Attribute_Request_Concrete<Logger> m_fw_attribute_request = {};
 #endif
 
+    const char* m_deviceId; // non-owning
     const char* m_deviceToken; // non-owning
 };
 
