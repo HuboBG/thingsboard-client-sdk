@@ -11,6 +11,10 @@
 #include <functional>  // for std::bind
 #endif
 
+// caps for cached firmware identity (adjust to your needs)
+static constexpr size_t MAX_FW_TITLE_LEN = 96;
+static constexpr size_t MAX_FW_VERSION_LEN = 48;
+
 // Keys & messages
 static constexpr uint8_t OTA_ATTRIBUTE_KEYS_AMOUNT = 5U;
 static constexpr char NO_FW_REQUEST_RESPONSE[] =
@@ -48,10 +52,10 @@ static constexpr char DOWNLOADING_FW[] = "Attempting to download over MQTT...";
 
 // ---- MQTT topic formats (runtime-built from device access token) ----
 // static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/%s/%s/%s/chunk/%u"; // token/title/version/chunk
-static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/%s/%s/chunk/%u"; // title/version/chunk
+static constexpr char FIRMWARE_REQUEST_FMT[] = "v3/fw/request/by-name/%s/%s/%s/chunk/%u"; // title/version/chunk
 
-static constexpr char FW_RESPONSE_SUBSCRIBE_FMT[] = "v3/fw/response/%s/chunk/+";
-static constexpr char FW_RESPONSE_PREFIX_FMT[] = "v3/fw/response/%s/chunk/";
+static constexpr char FW_RESPONSE_SUBSCRIBE_FMT[] = "v3/fw/response/by-name/%s/chunk/+";
+static constexpr char FW_RESPONSE_PREFIX_FMT[] = "v3/fw/response/by-name/%s/chunk/";
 
 // single shared stack buffer size for topics (token is typically <= 64)
 // static constexpr size_t TOPIC_BUF_SIZE = 192;
@@ -105,20 +109,28 @@ class OTA_Firmware_Update final : public IAPI_Implementation
 {
 public:
     OTA_Firmware_Update()
-        : c_fw_title(nullptr)
-          , c_fw_version(nullptr)
-          , m_deviceId(nullptr)
+        : m_deviceId(nullptr)
           , m_deviceToken(nullptr)
 #if THINGSBOARD_ENABLE_STL
           , m_ota(std::bind(&OTA_Firmware_Update::Publish_Chunk_Request, this,
                             std::placeholders::_1, std::placeholders::_2),
-                  std::bind(&OTA_Firmware_Update::Firmware_Send_State, this,
-                            std::placeholders::_1, std::placeholders::_2),
-                  std::bind(&OTA_Firmware_Update::Firmware_OTA_Unsubscribe, this))
+                  std::bind(&OTA_Firmware_Update::Firmware_Send_State,
+                            this
+                            ,
+                            std::placeholders::_1
+                            ,
+                            std::placeholders::_2
+                  )
+                  ,
+                  std::bind(&OTA_Firmware_Update::Firmware_OTA_Unsubscribe
+                            ,
+                            this
+                  )
+          )
 #else
-        , m_ota(OTA_Firmware_Update::staticPublishChunk,
-                OTA_Firmware_Update::staticFirmwareSend,
-                OTA_Firmware_Update::staticUnsubscribe)
+    , m_ota(OTA_Firmware_Update::staticPublishChunk,
+            OTA_Firmware_Update::staticFirmwareSend,
+            OTA_Firmware_Update::staticUnsubscribe)
 #endif
     {
 #if !THINGSBOARD_ENABLE_STL
@@ -148,8 +160,8 @@ public:
     }
 
     // Expose firmware identity captured from attributes
-    char const* c_fw_title;
-    char const* c_fw_version;
+    char m_fw_title[MAX_FW_TITLE_LEN] = {};
+    char m_fw_version[MAX_FW_VERSION_LEN] = {};
 
     // ---------- start / subscribe ----------
     bool Start_Firmware_Update(OTA_Update_Callback const& callback)
@@ -368,10 +380,11 @@ private:
 
     bool Firmware_OTA_Subscribe()
     {
-        Serial.println("Firmware_OTA_Subscribe");
-
         char subscribeTopic[TOPIC_BUF_SIZE];
         Build_Response_Subscribe(subscribeTopic, sizeof(subscribeTopic));
+
+        Serial.println("Firmware_OTA_Subscribe: " + String(subscribeTopic));
+
         if (!m_subscribe_topic_callback.Call_Callback(subscribeTopic))
         {
             Logger::printfln(SUBSCRIBE_TOPIC_FAILED, subscribeTopic);
@@ -407,8 +420,8 @@ private:
         Serial.println("Publish_Chunk_Request");
 
         if (Helper::stringIsNullorEmpty(m_deviceId) ||
-            Helper::stringIsNullorEmpty(c_fw_title) ||
-            Helper::stringIsNullorEmpty(c_fw_version))
+            Helper::stringIsNullorEmpty(m_fw_title) ||
+            Helper::stringIsNullorEmpty(m_fw_version))
         {
             Logger::printfln("Missing device_id/title/version for chunk request");
             return false;
@@ -419,10 +432,10 @@ private:
         char sizeStr[Helper::detectSize(NUMBER_PRINTF, chunk_size)] = {};
         (void)snprintf(sizeStr, sizeof(sizeStr), NUMBER_PRINTF, chunk_size);
 
-        char topic[Helper::detectSize(FIRMWARE_REQUEST_FMT, m_deviceId, c_fw_title, c_fw_version,
+        char topic[Helper::detectSize(FIRMWARE_REQUEST_FMT, m_deviceId, m_fw_title, m_fw_version,
                                       static_cast<unsigned>(request_chunk))] = {};
         (void)snprintf(topic, sizeof(topic), FIRMWARE_REQUEST_FMT,
-                       m_deviceId, c_fw_title, c_fw_version,
+                       m_deviceId, m_fw_title, m_fw_version,
                        static_cast<unsigned>(request_chunk));
 
         return m_send_json_string_callback.Call_Callback(topic, sizeStr);
@@ -520,15 +533,24 @@ private:
 #endif
 
         // cache for requests
-        c_fw_title = fw_title;
-        c_fw_version = fw_version;
+        strncpy(m_fw_title, fw_title, sizeof(m_fw_title) - 1);
+        m_fw_title[sizeof(m_fw_title) - 1] = '\0';
+        strncpy(m_fw_version, fw_version, sizeof(m_fw_version) - 1);
+        m_fw_version[sizeof(m_fw_version) - 1] = '\0';
 
         // buffer sizing for larger chunks
         const uint16_t& chunk_size = m_fw_callback.Get_Chunk_Size();
         m_previous_buffer_size = m_get_receive_size_callback.Call_Callback();
-        m_changed_buffer_size = m_previous_buffer_size < chunk_size + 50U;
+
+        // m_changed_buffer_size = m_previous_buffer_size < chunk_size + 50U;
+        const uint16_t need = chunk_size + 128U; // a bit of margin
+        m_changed_buffer_size = m_previous_buffer_size < need;
+
+        // if (m_changed_buffer_size &&
+        //     !m_set_buffer_size_callback.Call_Callback(chunk_size + 50U, m_get_send_size_callback.Call_Callback()))
+        // {
         if (m_changed_buffer_size &&
-            !m_set_buffer_size_callback.Call_Callback(chunk_size + 50U, m_get_send_size_callback.Call_Callback()))
+            !m_set_buffer_size_callback.Call_Callback(need, m_get_send_size_callback.Call_Callback()))
         {
             Logger::printfln(NOT_ENOUGH_RAM);
             // ReSharper disable once CppExpressionWithoutSideEffects

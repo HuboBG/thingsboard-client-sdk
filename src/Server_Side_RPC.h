@@ -21,7 +21,7 @@ static constexpr char RPC_REQUEST_PREFIX_FMT[] = "sensor/%s/request/";
 static constexpr char RPC_RESPONSE_FMT[] = "sensor/%s/response/%u";
 
 // Shared, safe stack buffer for topics (avoid VLAs)
-static constexpr size_t TOPIC_BUF_SIZE = 192;
+static constexpr size_t TOPIC_BUF_SIZE = 256;
 
 // Log messages.
 static constexpr char RPC_RESPONSE_OVERFLOWED[] = "Server-side RPC response overflowed, increase MaxRPC (%u)";
