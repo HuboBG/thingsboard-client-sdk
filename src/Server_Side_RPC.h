@@ -52,6 +52,7 @@ public:
 
     // ------------ Device identity setters ------------
     void SetDeviceID(char const* id) override { deviceId = id; }
+    void SetDeviceProfile(char const* id) override { deviceProfile = id; }
     void SetDeviceAccessToken(char const* tok) override { deviceAccessToken = tok; } // kept for future use
 
     /// @brief Subscribes multiple RPC callbacks
@@ -279,6 +280,7 @@ private:
     // NOTE: we store pointers (no ownership) to avoid heap use on MCUs.
     // Ensure the strings remain valid for the lifetime of this instance.
     const char* deviceId = nullptr;
+    const char* deviceProfile = nullptr;
     const char* deviceAccessToken = nullptr;
 
     // Client callbacks

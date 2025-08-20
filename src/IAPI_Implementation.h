@@ -93,6 +93,9 @@ public:
     virtual void SetDeviceID(char const* device_id) = 0;
 
     // NIMA CHANGES
+    virtual void SetDeviceProfile(char const* device_profile) = 0;
+
+    // NIMA CHANGES
     virtual void SetDeviceAccessToken(char const* access_token) = 0;
 
     /// @brief Sets the underlying callbacks that are required for the different API Implementation to communicate with the cloud.

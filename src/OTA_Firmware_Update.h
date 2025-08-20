@@ -22,6 +22,8 @@ static constexpr char NO_FW_REQUEST_RESPONSE[] =
 
 static constexpr char CURR_FW_TITLE_KEY[] = "current_fw_title";
 static constexpr char CURR_FW_VER_KEY[] = "current_fw_version";
+static constexpr char FW_DEVICE_NAME_KEY[] = "deviceName";
+static constexpr char FW_DEVICE_PROFILE_KEY[] = "deviceProfile";
 static constexpr char FW_ERROR_KEY[] = "fw_error";
 static constexpr char FW_STATE_KEY[] = "fw_state";
 static constexpr char FW_VER_KEY[] = "fw_version";
@@ -78,6 +80,10 @@ public:
     {
     }
 
+    void SetDeviceProfile(char const* /*device_profile*/) override
+    {
+    }
+
     void SetDeviceAccessToken(char const* /*access_token*/) override
     {
     }
@@ -97,6 +103,10 @@ public:
     {
     }
 
+    void SetDeviceProfile(char const* /*device_profile*/) override
+    {
+    }
+
     void SetDeviceAccessToken(char const* /*access_token*/) override
     {
     }
@@ -110,6 +120,7 @@ class OTA_Firmware_Update final : public IAPI_Implementation
 public:
     OTA_Firmware_Update()
         : m_deviceId(nullptr)
+          , m_deviceProfile(nullptr)
           , m_deviceToken(nullptr)
 #if THINGSBOARD_ENABLE_STL
           , m_ota(std::bind(&OTA_Firmware_Update::Publish_Chunk_Request, this,
@@ -139,6 +150,7 @@ public:
     }
 
     // ---------- identity setters ----------
+
     void SetDeviceID(char const* device_id) override
     {
         m_deviceId = device_id;
@@ -147,6 +159,15 @@ public:
         // forward to inner helpers so they can build topics like sensor/<id>/attributes
         m_fw_attribute_update.SetDeviceID(device_id);
         m_fw_attribute_request.SetDeviceID(device_id);
+    }
+    void SetDeviceProfile(char const* device_profile) override
+    {
+        m_deviceProfile = device_profile;
+        Serial.println("SetDeviceProfile: " + String(device_profile));
+
+        // forward to inner helpers so they can build topics like sensor/<id>/attributes
+        m_fw_attribute_update.SetDeviceProfile(device_profile);
+        m_fw_attribute_request.SetDeviceProfile(device_profile);
     }
 
     void SetDeviceAccessToken(char const* token) override
@@ -250,18 +271,24 @@ public:
     bool Firmware_Send_Info(char const* current_fw_title, char const* current_fw_version) const
     {
         Serial.println("Firmware_Send_Info");
-        StaticJsonDocument<JSON_OBJECT_SIZE(2)> doc;
+
+        StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
         doc[CURR_FW_TITLE_KEY] = current_fw_title;
         doc[CURR_FW_VER_KEY] = current_fw_version;
+        doc[FW_DEVICE_NAME_KEY] = m_deviceId;
+        doc[FW_DEVICE_PROFILE_KEY] = m_deviceProfile;
         return m_send_json_callback.Call_Callback(TELEMETRY_TOPIC, doc, Helper::Measure_Json(doc));
     }
 
     bool Firmware_Send_State(char const* current_fw_state, char const* fw_error = "") const
     {
-        Serial.println("Firmware_Send_State");
-        StaticJsonDocument<JSON_OBJECT_SIZE(2)> doc;
+        Serial.println("Firmware_Send_State: " + String(current_fw_state) + ", error: " + String(fw_error));
+
+        StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
         doc[FW_ERROR_KEY] = fw_error;
         doc[FW_STATE_KEY] = current_fw_state;
+        doc[FW_DEVICE_NAME_KEY] = m_deviceId;
+        doc[FW_DEVICE_PROFILE_KEY] = m_deviceProfile;
         return m_send_json_callback.Call_Callback(TELEMETRY_TOPIC, doc, Helper::Measure_Json(doc));
     }
 
@@ -299,6 +326,7 @@ public:
     bool Unsubscribe() override
     {
         Serial.println("OTA Unsubscribe");
+
         Stop_Firmware_Update();
         return Firmware_OTA_Unsubscribe();
     }
@@ -306,6 +334,7 @@ public:
     bool Resubscribe_Topic() override
     {
         Serial.println("OTA Resubscribe_Topic");
+
         return Firmware_OTA_Subscribe();
     }
 
@@ -630,6 +659,7 @@ private:
 #endif
 
     const char* m_deviceId; // non-owning
+    const char* m_deviceProfile; // non-owning
     const char* m_deviceToken; // non-owning
 };
 

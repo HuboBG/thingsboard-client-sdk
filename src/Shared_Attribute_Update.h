@@ -32,6 +32,7 @@ public:
 
     // ------------ Device identity setters ------------
     void SetDeviceID(char const* id) override { deviceId = id; }
+    void SetDeviceProfile(char const* id) override { deviceProfile = id; }
     void SetDeviceAccessToken(char const* tok) override { deviceAccessToken = tok; } // reserved for future use
 
     /// @brief Subscribes multiple shared attribute callbacks
@@ -290,6 +291,7 @@ private:
 
     // Stored as non-owning pointers; ensure lifetime managed by caller
     const char* deviceId = nullptr;
+    const char* deviceProfile = nullptr;
     const char* deviceAccessToken = nullptr;
 
     Callback<bool, char const* const> m_subscribe_topic_callback = {}; // Subscribe mqtt topic client callback
