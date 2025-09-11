@@ -28,12 +28,11 @@ template <size_t MaxSubscriptions = Default_Subscriptions_Amount,
 class Shared_Attribute_Update final : public IAPI_Implementation
 {
 public:
-    Shared_Attribute_Update() = default;
-
-    // ------------ Device identity setters ------------
-    void SetDeviceID(char const* id) override { deviceId = id; }
-    void SetDeviceProfile(char const* id) override { deviceProfile = id; }
-    void SetDeviceAccessToken(char const* tok) override { deviceAccessToken = tok; } // reserved for future use
+    Shared_Attribute_Update() : IAPI_Implementation(),
+                                m_deviceId(nullptr),
+                                m_deviceProfile(nullptr)
+    {
+    }
 
     /// @brief Subscribes multiple shared attribute callbacks
     template <typename InputIterator>
@@ -124,6 +123,9 @@ public:
     void Process_Json_Response(char const* /*topic*/, JsonDocument const& data) override
     {
         Serial.println("Shared_Attributes :: Process_Json_Response 1");
+        // Debug: print the received JSON document
+        serializeJsonPretty(data, Serial);
+        Serial.println();
 
         auto object = data.as<JsonObjectConst>();
         if (object.containsKey(SHARED_RESPONSE_KEY))
@@ -274,11 +276,31 @@ public:
         m_unsubscribe_topic_callback.Set_Callback(unsubscribe_topic_callback);
     }
 
+    const char* GetDeviceId() override
+    {
+        return m_deviceId ? m_deviceId : "";
+    }
+
+    void SetDeviceId(const char* device_id) override
+    {
+        m_deviceId = device_id;
+    }
+
+    const char* GetDeviceProfile() override
+    {
+        return m_deviceProfile ? m_deviceProfile : "";
+    }
+
+    void SetDeviceProfile(const char* device_profile) override
+    {
+        m_deviceProfile = device_profile;
+    }
+
 private:
     // Build "sensor/<deviceId>/attributes" into out; returns true if it fits
     bool Build_Attribute_Topic(char* out, const size_t outLen) const
     {
-        char const* id = deviceId && *deviceId ? deviceId : "unknown";
+        char const* id = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
         const int need = snprintf(nullptr, 0, ATTRIBUTE_TOPIC_FMT, id) + 1; // include NUL
         if (need <= 0 || static_cast<size_t>(need) > outLen)
         {
@@ -290,9 +312,8 @@ private:
     }
 
     // Stored as non-owning pointers; ensure lifetime managed by caller
-    const char* deviceId = nullptr;
-    const char* deviceProfile = nullptr;
-    const char* deviceAccessToken = nullptr;
+    const char* m_deviceId = nullptr;
+    const char* m_deviceProfile = nullptr;
 
     Callback<bool, char const* const> m_subscribe_topic_callback = {}; // Subscribe mqtt topic client callback
     Callback<bool, char const* const> m_unsubscribe_topic_callback = {}; // Unsubscribe mqtt topic client callback

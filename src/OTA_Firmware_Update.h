@@ -16,16 +16,16 @@ static constexpr size_t MAX_FW_TITLE_LEN = 96;
 static constexpr size_t MAX_FW_VERSION_LEN = 48;
 
 // Keys & messages
-static constexpr uint8_t OTA_ATTRIBUTE_KEYS_AMOUNT = 5U;
-static constexpr char NO_FW_REQUEST_RESPONSE[] =
+static constexpr uint8_t SHARED_ATTRIBUTE_KEYS_AMOUNT = 5U;
+static constexpr char NO_SHARED_ATTRS_REQUEST_RESPONSE[] =
     "Did not receive requested shared attribute firmware keys. Ensure keys exist and device is connected";
 
 static constexpr char CURR_FW_TITLE_KEY[] = "current_fw_title";
 static constexpr char CURR_FW_VER_KEY[] = "current_fw_version";
-static constexpr char FW_DEVICE_NAME_KEY[] = "deviceName";
-static constexpr char FW_DEVICE_PROFILE_KEY[] = "deviceProfile";
-static constexpr char FW_ERROR_KEY[] = "fw_error";
-static constexpr char FW_STATE_KEY[] = "fw_state";
+static constexpr char DEVICE_NAME_KEY[] = "deviceName";
+static constexpr char DEVICE_PROFILE_KEY[] = "deviceProfile";
+static constexpr char ERROR_KEY[] = "fw_error";
+static constexpr char STATE_KEY[] = "fw_state";
 static constexpr char FW_VER_KEY[] = "fw_version";
 static constexpr char FW_TITLE_KEY[] = "fw_title";
 static constexpr char FW_CHKS_KEY[] = "fw_checksum";
@@ -67,51 +67,51 @@ static constexpr char FW_RESPONSE_PREFIX_FMT[] = "v3/fw/response/by-name/%s/chun
 // --------------------------------------------------------------------------------------
 #if !THINGSBOARD_ENABLE_DYNAMIC
 template <typename Logger>
-class Attribute_Request_Concrete final : public Attribute_Request<1U, OTA_ATTRIBUTE_KEYS_AMOUNT, Logger>
+class Attribute_Request_OTA final : public Attribute_Request<1U, SHARED_ATTRIBUTE_KEYS_AMOUNT, Logger>
 {
 public:
-    using Base = Attribute_Request<1U, OTA_ATTRIBUTE_KEYS_AMOUNT, Logger>;
+    using Base = Attribute_Request<1U, SHARED_ATTRIBUTE_KEYS_AMOUNT, Logger>;
 
-    Attribute_Request_Concrete() : Base()
+    Attribute_Request_OTA() : Base()
     {
     }
 
-    void SetDeviceID(char const* /*device_id*/) override
-    {
-    }
+    const char* GetDeviceId() override { return m_deviceId.c_str(); }
+    void SetDeviceId(const char* device_id) { m_deviceId = device_id ? device_id : ""; }
 
-    void SetDeviceProfile(char const* /*device_profile*/) override
-    {
-    }
+    const char* GetDeviceProfile() override { return m_deviceProfile.c_str(); }
+    void SetDeviceProfile(const char* device_profile) { m_deviceProfile = device_profile ? device_profile : ""; }
 
-    void SetDeviceAccessToken(char const* /*access_token*/) override
-    {
-    }
+private:
+    std::string m_deviceId;
+    std::string m_deviceProfile;
 };
-#else
+
+#else // THINGSBOARD_ENABLE_DYNAMIC
+
 template <typename Logger>
-class Attribute_Request_Concrete : public Attribute_Request<Logger>
+class Attribute_Request_OTA : public Attribute_Request<Logger>
 {
 public:
     using Base = Attribute_Request<Logger>;
 
-    Attribute_Request_Concrete() : Base()
+    Attribute_Request_OTA() : Base()
     {
     }
 
-    void SetDeviceID(char const* /*device_id*/) override
-    {
-    }
+    const char* GetDeviceId() override { return m_deviceId.c_str(); }
+    void SetDeviceId(const char* device_id) { m_deviceId = device_id ? device_id : ""; }
 
-    void SetDeviceProfile(char const* /*device_profile*/) override
-    {
-    }
+    const char* GetDeviceProfile() override { return m_deviceProfile.c_str(); }
+    void SetDeviceProfile(const char* device_profile) { m_deviceProfile = device_profile ? device_profile : ""; }
 
-    void SetDeviceAccessToken(char const* /*access_token*/) override
-    {
-    }
+private:
+    std::string m_deviceId;
+    std::string m_deviceProfile;
 };
+
 #endif
+
 
 /// @brief OTA over MQTT
 template <typename Logger = DefaultLogger>
@@ -121,7 +121,6 @@ public:
     OTA_Firmware_Update()
         : m_deviceId(nullptr)
           , m_deviceProfile(nullptr)
-          , m_deviceToken(nullptr)
 #if THINGSBOARD_ENABLE_STL
           , m_ota(std::bind(&OTA_Firmware_Update::Publish_Chunk_Request, this,
                             std::placeholders::_1, std::placeholders::_2),
@@ -151,34 +150,45 @@ public:
 
     // ---------- identity setters ----------
 
-    void SetDeviceID(char const* device_id) override
+    void SetDeviceId(const char* device_id) override
     {
         m_deviceId = device_id;
-        Serial.println("SetDeviceID: " + String(m_deviceId));
+        // Serial.println("SetDeviceID: " + String(m_deviceId));
 
         // forward to inner helpers so they can build topics like sensor/<id>/attributes
-        m_fw_attribute_update.SetDeviceID(device_id);
-        m_fw_attribute_request.SetDeviceID(device_id);
+        m_fw_attribute_update.SetDeviceId(device_id);
+        m_fw_attribute_request.SetDeviceId(device_id);
     }
-    void SetDeviceProfile(char const* device_profile) override
+
+    void SetDeviceProfile(const char* device_profile) override
     {
         m_deviceProfile = device_profile;
-        Serial.println("SetDeviceProfile: " + String(device_profile));
+        // Serial.println("SetDeviceProfile: " + String(device_profile));
 
         // forward to inner helpers so they can build topics like sensor/<id>/attributes
         m_fw_attribute_update.SetDeviceProfile(device_profile);
         m_fw_attribute_request.SetDeviceProfile(device_profile);
     }
 
-    void SetDeviceAccessToken(char const* token) override
+    const char* GetDeviceId() override
     {
-        m_deviceToken = token;
-        Serial.println("SetDeviceAccessToken: " + String(token));
-
-        // forward token as well (kept for future use / symmetry)
-        m_fw_attribute_update.SetDeviceAccessToken(token);
-        m_fw_attribute_request.SetDeviceAccessToken(token);
+        return m_deviceId ? m_deviceId : "";
     }
+
+    const char* GetDeviceProfile() override
+    {
+        return m_deviceProfile ? m_deviceProfile : "";
+    }
+
+    // void SetDeviceAccessToken(char const* token) override
+    // {
+    //     m_deviceToken = token;
+    //     Serial.println("SetDeviceAccessToken: " + String(token));
+    //
+    //     // forward token as well (kept for future use / symmetry)
+    //     m_fw_attribute_update.SetDeviceAccessToken(token);
+    //     m_fw_attribute_request.SetDeviceAccessToken(token);
+    // }
 
     // Expose firmware identity captured from attributes
     char m_fw_title[MAX_FW_TITLE_LEN] = {};
@@ -193,7 +203,7 @@ public:
             return false;
         }
 
-        constexpr char const* keys[OTA_ATTRIBUTE_KEYS_AMOUNT] =
+        constexpr char const* keys[SHARED_ATTRIBUTE_KEYS_AMOUNT] =
             {FW_CHKS_KEY, FW_CHKS_ALGO_KEY, FW_SIZE_KEY, FW_TITLE_KEY, FW_VER_KEY};
 
 #if THINGSBOARD_ENABLE_DYNAMIC
@@ -202,27 +212,27 @@ public:
             std::bind(&OTA_Firmware_Update::Firmware_Shared_Attribute_Received, this, std::placeholders::_1),
             callback.Get_Timeout(),
             std::bind(&OTA_Firmware_Update::Request_Timeout, this),
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #else
         const Attribute_Request_Callback fw_request_cb(
             OTA_Firmware_Update::onStaticFirmwareReceived,
             callback.Get_Timeout(),
             OTA_Firmware_Update::onStaticRequestTimeout,
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #endif
 #else
 #if THINGSBOARD_ENABLE_STL
-        const Attribute_Request_Callback<OTA_ATTRIBUTE_KEYS_AMOUNT> fw_request_cb(
+        const Attribute_Request_Callback<SHARED_ATTRIBUTE_KEYS_AMOUNT> fw_request_cb(
             std::bind(&OTA_Firmware_Update::Firmware_Shared_Attribute_Received, this, std::placeholders::_1),
             callback.Get_Timeout(),
             std::bind(&OTA_Firmware_Update::Request_Timeout, this),
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #else
-        const Attribute_Request_Callback<OTA_ATTRIBUTE_KEYS_AMOUNT> fw_request_cb(
+        const Attribute_Request_Callback<SHARED_ATTRIBUTE_KEYS_AMOUNT> fw_request_cb(
             OTA_Firmware_Update::onStaticFirmwareReceived,
             callback.Get_Timeout(),
             OTA_Firmware_Update::onStaticRequestTimeout,
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #endif
 #endif
         return m_fw_attribute_request.Shared_Attributes_Request(fw_request_cb);
@@ -238,28 +248,28 @@ public:
             return false;
         }
 
-        char const* keys[OTA_ATTRIBUTE_KEYS_AMOUNT] =
+        char const* keys[SHARED_ATTRIBUTE_KEYS_AMOUNT] =
             {FW_CHKS_KEY, FW_CHKS_ALGO_KEY, FW_SIZE_KEY, FW_TITLE_KEY, FW_VER_KEY};
 
 #if THINGSBOARD_ENABLE_DYNAMIC
 #if THINGSBOARD_ENABLE_STL
         const Shared_Attribute_Callback fw_update_cb(
             std::bind(&OTA_Firmware_Update::Firmware_Shared_Attribute_Received, this, std::placeholders::_1),
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #else
         const Shared_Attribute_Callback fw_update_cb(
             OTA_Firmware_Update::onStaticFirmwareReceived,
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #endif
 #else
 #if THINGSBOARD_ENABLE_STL
-        const Shared_Attribute_Callback<OTA_ATTRIBUTE_KEYS_AMOUNT> fw_update_cb(
+        const Shared_Attribute_Callback<SHARED_ATTRIBUTE_KEYS_AMOUNT> fw_update_cb(
             std::bind(&OTA_Firmware_Update::Firmware_Shared_Attribute_Received, this, std::placeholders::_1),
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #else
-        const Shared_Attribute_Callback<OTA_ATTRIBUTE_KEYS_AMOUNT> fw_update_cb(
+        const Shared_Attribute_Callback<SHARED_ATTRIBUTE_KEYS_AMOUNT> fw_update_cb(
             OTA_Firmware_Update::onStaticFirmwareReceived,
-            keys + 0U, keys + OTA_ATTRIBUTE_KEYS_AMOUNT);
+            keys + 0U, keys + SHARED_ATTRIBUTE_KEYS_AMOUNT);
 #endif
 #endif
         return m_fw_attribute_update.Shared_Attributes_Subscribe(fw_update_cb);
@@ -275,8 +285,8 @@ public:
         StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
         doc[CURR_FW_TITLE_KEY] = current_fw_title;
         doc[CURR_FW_VER_KEY] = current_fw_version;
-        doc[FW_DEVICE_NAME_KEY] = m_deviceId;
-        doc[FW_DEVICE_PROFILE_KEY] = m_deviceProfile;
+        doc[DEVICE_NAME_KEY] = m_deviceId;
+        doc[DEVICE_PROFILE_KEY] = m_deviceProfile;
         return m_send_json_callback.Call_Callback(TELEMETRY_TOPIC, doc, Helper::Measure_Json(doc));
     }
 
@@ -285,10 +295,10 @@ public:
         Serial.println("Firmware_Send_State: " + String(current_fw_state) + ", error: " + String(fw_error));
 
         StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
-        doc[FW_ERROR_KEY] = fw_error;
-        doc[FW_STATE_KEY] = current_fw_state;
-        doc[FW_DEVICE_NAME_KEY] = m_deviceId;
-        doc[FW_DEVICE_PROFILE_KEY] = m_deviceProfile;
+        doc[ERROR_KEY] = fw_error;
+        doc[STATE_KEY] = current_fw_state;
+        doc[DEVICE_NAME_KEY] = m_deviceId;
+        doc[DEVICE_PROFILE_KEY] = m_deviceProfile;
         return m_send_json_callback.Call_Callback(TELEMETRY_TOPIC, doc, Helper::Measure_Json(doc));
     }
 
@@ -473,14 +483,18 @@ private:
     void Request_Timeout()
     {
         Serial.println("Request_Timeout");
-        Logger::printfln(NO_FW_REQUEST_RESPONSE);
+        Logger::printfln(NO_SHARED_ATTRS_REQUEST_RESPONSE);
         // ReSharper disable once CppExpressionWithoutSideEffects
-        Firmware_Send_State(FW_STATE_FAILED, NO_FW_REQUEST_RESPONSE);
+        Firmware_Send_State(FW_STATE_FAILED, NO_SHARED_ATTRS_REQUEST_RESPONSE);
     }
 
     void Firmware_Shared_Attribute_Received(JsonObjectConst const& data)
     {
         Serial.println("Firmware_Shared_Attribute_Received");
+
+        // Print JSON object to Serial
+        serializeJson(data, Serial);
+        Serial.println(); // newline for readability
 
         if (!data.containsKey(FW_VER_KEY) || !data.containsKey(FW_TITLE_KEY) ||
             !data.containsKey(FW_CHKS_KEY) || !data.containsKey(FW_CHKS_ALGO_KEY) ||
@@ -651,16 +665,15 @@ private:
     OTA_Handler<Logger> m_ota; // now correctly constructed
 
 #if !THINGSBOARD_ENABLE_DYNAMIC
-    Shared_Attribute_Update<1U, OTA_ATTRIBUTE_KEYS_AMOUNT, Logger> m_fw_attribute_update = {};
-    Attribute_Request_Concrete<Logger> m_fw_attribute_request = {};
+    Shared_Attribute_Update<1U, SHARED_ATTRIBUTE_KEYS_AMOUNT, Logger> m_fw_attribute_update = {};
+    Attribute_Request_OTA<Logger> m_fw_attribute_request = {};
 #else
     Shared_Attribute_Update<Logger> m_fw_attribute_update = {};
-    Attribute_Request_Concrete<Logger> m_fw_attribute_request = {};
+    Attribute_Request_OTA<Logger> m_fw_attribute_request = {};
 #endif
 
     const char* m_deviceId; // non-owning
     const char* m_deviceProfile; // non-owning
-    const char* m_deviceToken; // non-owning
 };
 
 #if !THINGSBOARD_ENABLE_STL

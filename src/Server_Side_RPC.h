@@ -38,6 +38,8 @@ static constexpr char CALLING_RPC_CB[] = "Calling subscribed callback for rpc wi
 #if THINGSBOARD_ENABLE_DYNAMIC
 template <typename Logger = DefaultLogger>
 
+
+
 #else
 // See arduinojson.org assistant to size MaxRPC (divide recommended bytes by 16)
 template <size_t MaxSubscriptions = Default_Subscriptions_Amount,
@@ -48,12 +50,11 @@ class Server_Side_RPC final : public IAPI_Implementation
 {
 public:
     /// @brief Constructor
-    Server_Side_RPC() = default;
-
-    // ------------ Device identity setters ------------
-    void SetDeviceID(char const* id) override { deviceId = id; }
-    void SetDeviceProfile(char const* id) override { deviceProfile = id; }
-    void SetDeviceAccessToken(char const* tok) override { deviceAccessToken = tok; } // kept for future use
+    Server_Side_RPC() : IAPI_Implementation(),
+                        m_deviceId(nullptr),
+                        m_deviceProfile(nullptr)
+    {
+    }
 
     /// @brief Subscribes multiple RPC callbacks
     template <typename InputIterator>
@@ -115,12 +116,12 @@ public:
     void Process_Response(char const* /*topic*/, uint8_t* /*payload*/, unsigned int /*length*/) override
     {
         // Nothing to do for raw payload here.
-        Serial.println("Process_Response called");
+        Serial.println("RPC Process_Response called");
     }
 
     void Process_Json_Response(char const* topic, JsonDocument const& data) override
     {
-        Serial.println("Process_Json_Response called");
+        Serial.println("RPC Process_Json_Response called");
 
         if (!data.containsKey(RPC_METHOD_KEY))
         {
@@ -251,11 +252,31 @@ public:
         m_unsubscribe_topic_callback.Set_Callback(unsubscribe_topic_callback);
     }
 
+    const char* GetDeviceId() override
+    {
+        return m_deviceId ? m_deviceId : "";
+    }
+
+    void SetDeviceId(const char* device_id) override
+    {
+        m_deviceId = device_id;
+    }
+
+    const char* GetDeviceProfile() override
+    {
+        return m_deviceProfile ? m_deviceProfile : "";
+    }
+
+    void SetDeviceProfile(const char* device_profile) override
+    {
+        m_deviceProfile = device_profile;
+    }
+
 private:
     // --- Helpers to build topics safely (handles missing deviceId) ---
     size_t Build_Subscribe_Topic(char* out, const size_t outLen) const
     {
-        char const* id = deviceId && *deviceId ? deviceId : "unknown";
+        const char* id = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
         const int need = snprintf(nullptr, 0, RPC_SUBSCRIBE_FMT, id) + 1;
         if (out && outLen) { (void)snprintf(out, outLen, RPC_SUBSCRIBE_FMT, id); }
         return static_cast<size_t>(need);
@@ -263,7 +284,7 @@ private:
 
     size_t Build_Request_Prefix(char* out, const size_t outLen) const
     {
-        char const* id = deviceId && *deviceId ? deviceId : "unknown";
+        const char* id = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
         const int need = snprintf(nullptr, 0, RPC_REQUEST_PREFIX_FMT, id) + 1;
         if (out && outLen) { (void)snprintf(out, outLen, RPC_REQUEST_PREFIX_FMT, id); }
         return static_cast<size_t>(need);
@@ -271,17 +292,15 @@ private:
 
     size_t Build_Response_Topic(char* out, const size_t outLen, const size_t request_id) const
     {
-        char const* id = deviceId && *deviceId ? deviceId : "unknown";
+        const char* id = m_deviceId && *m_deviceId ? m_deviceId : "unknown";
         const int need = snprintf(nullptr, 0, RPC_RESPONSE_FMT, id, static_cast<unsigned>(request_id)) + 1;
         if (out && outLen) { (void)snprintf(out, outLen, RPC_RESPONSE_FMT, id, static_cast<unsigned>(request_id)); }
         return static_cast<size_t>(need);
     }
 
-    // NOTE: we store pointers (no ownership) to avoid heap use on MCUs.
-    // Ensure the strings remain valid for the lifetime of this instance.
-    const char* deviceId = nullptr;
-    const char* deviceProfile = nullptr;
-    const char* deviceAccessToken = nullptr;
+    // Stored as non-owning pointers; ensure lifetime managed by caller
+    const char* m_deviceId = nullptr;
+    const char* m_deviceProfile = nullptr;
 
     // Client callbacks
     Callback<bool, char const* const, JsonDocument const&, size_t const&> m_send_json_callback = {};

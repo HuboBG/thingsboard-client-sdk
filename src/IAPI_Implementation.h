@@ -90,13 +90,10 @@ public:
     virtual void Initialize() = 0;
 
     // NIMA CHANGES
-    virtual void SetDeviceID(char const* device_id) = 0;
-
-    // NIMA CHANGES
-    virtual void SetDeviceProfile(char const* device_profile) = 0;
-
-    // NIMA CHANGES
-    virtual void SetDeviceAccessToken(char const* access_token) = 0;
+    virtual const char* GetDeviceId() = 0;
+    virtual void SetDeviceId(const char* device_id) = 0;
+    virtual const char* GetDeviceProfile() = 0;
+    virtual void SetDeviceProfile(const char* device_id) = 0;
 
     /// @brief Sets the underlying callbacks that are required for the different API Implementation to communicate with the cloud.
     /// Directly set by the used ThingsBoard client to its internal methods, therefore calling again and overriding
@@ -111,12 +108,12 @@ public:
     /// @param set_buffer_size_callback Method which allows to set the current underlying size of the buffer, points to m_client.set_buffer_size per default
     /// @param get_request_id_callback Method which allows to get the current request id as a mutable reference, points to getRequestID per default
     virtual void Set_Client_Callbacks(Callback<void, IAPI_Implementation&>::function subscribe_api_callback,
-                                      Callback<bool, char const* const, JsonDocument const&, size_t const&>::function
+                                      Callback<bool, const char* const, const JsonDocument&, const size_t&>::function
                                       send_json_callback,
-                                      Callback<bool, char const* const, char const* const>::function
+                                      Callback<bool, const char* const, const char* const>::function
                                       send_json_string_callback,
-                                      Callback<bool, char const* const>::function subscribe_topic_callback,
-                                      Callback<bool, char const* const>::function unsubscribe_topic_callback,
+                                      Callback<bool, const char* const>::function subscribe_topic_callback,
+                                      Callback<bool, const char* const>::function unsubscribe_topic_callback,
                                       Callback<uint16_t>::function get_receive_size_callback,
                                       Callback<uint16_t>::function get_send_size_callback,
                                       Callback<bool, uint16_t, uint16_t>::function set_buffer_size_callback,
