@@ -711,8 +711,8 @@ class ThingsBoardSized {
 
 #if THINGSBOARD_ENABLE_DEBUG
         Logger::printfln(RECEIVE_MESSAGE, length, topic);
-        Serial.print("[TB] MQTT Response: " + String(topic) + " - ");
-        Serial.println(String((const char*)payload).substring(0, length));
+        // Serial.print("[TB] MQTT Response: " + String(topic) + " - ");
+        // Serial.println(String((const char*)payload).substring(0, length));
 #endif // THINGSBOARD_ENABLE_DEBUG
 
 #if THINGSBOARD_ENABLE_STL

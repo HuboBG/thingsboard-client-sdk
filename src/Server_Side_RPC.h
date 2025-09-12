@@ -60,7 +60,7 @@ public:
     template <typename InputIterator>
     bool RPC_Subscribe(InputIterator const& first, InputIterator const& last)
     {
-        Serial.println("RPC_Subscribe called");
+        // Serial.println("RPC_Subscribe called");
 
 #if !THINGSBOARD_ENABLE_DYNAMIC
         const size_t size = Helper::distance(first, last);
@@ -82,7 +82,7 @@ public:
     /// @brief Subscribe a single RPC callback
     bool RPC_Subscribe(RPC_Callback const& callback)
     {
-        Serial.println("RPC_Subscribe 2 called");
+        // Serial.println("RPC_Subscribe 2 called");
 
 #if !THINGSBOARD_ENABLE_DYNAMIC
         if (m_rpc_callbacks.size() + 1 > m_rpc_callbacks.capacity())
@@ -103,7 +103,7 @@ public:
     /// @brief Unsubscribe all RPC callbacks and topic
     bool RPC_Unsubscribe()
     {
-        Serial.println("RPC_Unsubscribe called");
+        // Serial.println("RPC_Unsubscribe called");
         m_rpc_callbacks.clear();
 
         char topic[TOPIC_BUF_SIZE];
@@ -116,12 +116,12 @@ public:
     void Process_Response(char const* /*topic*/, uint8_t* /*payload*/, unsigned int /*length*/) override
     {
         // Nothing to do for raw payload here.
-        Serial.println("RPC Process_Response called");
+        // Serial.println("RPC Process_Response called");
     }
 
     void Process_Json_Response(char const* topic, JsonDocument const& data) override
     {
-        Serial.println("RPC Process_Json_Response called");
+        // Serial.println("RPC Process_Json_Response called");
 
         if (!data.containsKey(RPC_METHOD_KEY))
         {

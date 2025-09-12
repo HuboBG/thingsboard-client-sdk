@@ -105,7 +105,7 @@ public:
     /// shouldn't really matter, because if we start the update process again the partition will be overwritten anyway and a partially written firmware will not be bootable
     void Stop_Firmware_Update()
     {
-        Serial.println("Stop_Firmware_Update called");
+        // Serial.println("Stop_Firmware_Update called");
 
         m_watchdog.detach();
         m_fw_updater->reset();
@@ -199,7 +199,7 @@ private:
     /// @return Whether the received chunk has the expected size or not
     bool Received_Valid_Chunk_Size(size_t const& received_chunk_size, size_t& expected_chunk_size)
     {
-        Serial.println("Received_Valid_Chunk_Size called");
+        // Serial.println("Received_Valid_Chunk_Size called");
 
         // bool const is_last_chunk = m_requested_chunks + 1 >= m_total_chunks;
         // if (is_last_chunk) {

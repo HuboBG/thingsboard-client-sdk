@@ -38,7 +38,7 @@ public:
     template <typename InputIterator>
     bool Shared_Attributes_Subscribe(InputIterator const& first, InputIterator const& last)
     {
-        Serial.println("Shared_Attributes_Subscribe 1");
+        // Serial.println("Shared_Attributes_Subscribe 1");
 
 #if !THINGSBOARD_ENABLE_DYNAMIC
         size_t const size = Helper::distance(first, last);
@@ -68,7 +68,7 @@ public:
     bool Shared_Attributes_Subscribe(Shared_Attribute_Callback<MaxAttributes> const& callback)
 #endif
     {
-        Serial.println("Shared_Attributes_Subscribe 2");
+        // Serial.println("Shared_Attributes_Subscribe 2");
 
 #if !THINGSBOARD_ENABLE_DYNAMIC
         if (m_shared_attribute_update_callbacks.size() + 1U > m_shared_attribute_update_callbacks.capacity())
@@ -97,7 +97,7 @@ public:
     /// @brief Unsubscribes all shared attribute callbacks and topic
     bool Shared_Attributes_Unsubscribe()
     {
-        Serial.println("Shared_Attributes_Unsubscribe");
+        // Serial.println("Shared_Attributes_Unsubscribe");
 
         m_shared_attribute_update_callbacks.clear();
 
@@ -122,7 +122,7 @@ public:
 
     void Process_Json_Response(char const* /*topic*/, JsonDocument const& data) override
     {
-        Serial.println("Shared_Attributes :: Process_Json_Response 1");
+        // Serial.println("Shared_Attributes :: Process_Json_Response 1");
         // Debug: print the received JSON document
         serializeJsonPretty(data, Serial);
         Serial.println();
@@ -168,7 +168,7 @@ public:
                                           }) != shared_attribute.Get_Attributes().end();
                      });
 
-        Serial.println("Shared_Attributes :: Process_Json_Response 2");
+        // Serial.println("Shared_Attributes :: Process_Json_Response 2");
 
         for (auto const& shared_attribute : filtered_shared_attribute_update_callbacks)
         {
@@ -178,7 +178,7 @@ public:
                 if (shared_attribute.Get_Attributes().empty())
                 {
                     // No specific keys were subscribed, call for any update
-                    Serial.println("Shared_Attributes :: Process_Json_Response 3 - no attributes");
+                    // Serial.println("Shared_Attributes :: Process_Json_Response 3 - no attributes");
                     shared_attribute.Call_Callback(object);
                     continue;
                 }
@@ -188,7 +188,7 @@ public:
                 {
                     if (Helper::stringIsNullorEmpty(att))
                     {
-                        Serial.println("Shared_Attributes :: Process_Json_Response 4 - empty attribute");
+                        // Serial.println("Shared_Attributes :: Process_Json_Response 4 - empty attribute");
                         continue;
                     }
                     if (object.containsKey(att))
@@ -200,13 +200,13 @@ public:
 
                 if (requested_att == nullptr)
                 {
-                    Serial.println("Shared_Attributes :: Process_Json_Response 5 - no requested attribute");
+                    // Serial.println("Shared_Attributes :: Process_Json_Response 5 - no requested attribute");
                     continue;
                 }
 
-                Serial.println(
-                    "Shared_Attributes :: Process_Json_Response 6 - requested attribute found: object contains " +
-                    String(requested_att));
+                // Serial.println(
+                //     "Shared_Attributes :: Process_Json_Response 6 - requested attribute found: object contains " +
+                //     String(requested_att));
 #endif // THINGSBOARD_ENABLE_STL
             shared_attribute.Call_Callback(object);
         }
@@ -229,7 +229,7 @@ public:
 
     bool Resubscribe_Topic() override
     {
-        Serial.println("Shared_Attributes :: Resubscribe_Topic");
+        // Serial.println("Shared_Attributes :: Resubscribe_Topic");
 
         if (!m_shared_attribute_update_callbacks.empty())
         {

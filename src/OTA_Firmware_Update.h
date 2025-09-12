@@ -240,7 +240,7 @@ public:
 
     bool Subscribe_Firmware_Update(OTA_Update_Callback const& callback)
     {
-        Serial.println("Subscribe_Firmware_Update");
+        // Serial.println("Subscribe_Firmware_Update");
 
         if (!Prepare_Firmware_Settings(callback))
         {
@@ -280,7 +280,7 @@ public:
     // ---------- telemetry helpers ----------
     bool Firmware_Send_Info(char const* current_fw_title, char const* current_fw_version) const
     {
-        Serial.println("Firmware_Send_Info");
+        // Serial.println("Firmware_Send_Info");
 
         StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
         doc[CURR_FW_TITLE_KEY] = current_fw_title;
@@ -292,7 +292,7 @@ public:
 
     bool Firmware_Send_State(char const* current_fw_state, char const* fw_error = "") const
     {
-        Serial.println("Firmware_Send_State: " + String(current_fw_state) + ", error: " + String(fw_error));
+        // Serial.println("Firmware_Send_State: " + String(current_fw_state) + ", error: " + String(fw_error));
 
         StaticJsonDocument<JSON_OBJECT_SIZE(4)> doc;
         doc[ERROR_KEY] = fw_error;
@@ -307,7 +307,7 @@ public:
 
     void Process_Response(char const* topic, uint8_t* payload, unsigned int length) override
     {
-        Serial.println(String("OTA Process_Response: ") + topic);
+        // Serial.println(String("OTA Process_Response: ") + topic);
 
         char prefix[TOPIC_BUF_SIZE];
         Build_Response_Prefix(prefix, sizeof(prefix));
@@ -323,7 +323,7 @@ public:
 
     void Process_Json_Response(char const* /*topic*/, JsonDocument const& /*data*/) override
     {
-        Serial.println("Process_Json_Response (unused for OTA)");
+        // Serial.println("Process_Json_Response (unused for OTA)");
     }
 
     bool Compare_Response_Topic(char const* topic) const override
@@ -335,7 +335,7 @@ public:
 
     bool Unsubscribe() override
     {
-        Serial.println("OTA Unsubscribe");
+        // Serial.println("OTA Unsubscribe");
 
         Stop_Firmware_Update();
         return Firmware_OTA_Unsubscribe();
@@ -343,7 +343,7 @@ public:
 
     bool Resubscribe_Topic() override
     {
-        Serial.println("OTA Resubscribe_Topic");
+        // Serial.println("OTA Resubscribe_Topic");
 
         return Firmware_OTA_Subscribe();
     }
@@ -385,7 +385,7 @@ private:
     // ---------- internals ----------
     bool Prepare_Firmware_Settings(OTA_Update_Callback const& callback)
     {
-        Serial.println("Prepare_Firmware_Settings");
+        // Serial.println("Prepare_Firmware_Settings");
 
         /*if (Helper::stringIsNullorEmpty(m_deviceToken))
         {
@@ -422,7 +422,7 @@ private:
         char subscribeTopic[TOPIC_BUF_SIZE];
         Build_Response_Subscribe(subscribeTopic, sizeof(subscribeTopic));
 
-        Serial.println("Firmware_OTA_Subscribe: " + String(subscribeTopic));
+        // Serial.println("Firmware_OTA_Subscribe: " + String(subscribeTopic));
 
         if (!m_subscribe_topic_callback.Call_Callback(subscribeTopic))
         {
@@ -436,7 +436,7 @@ private:
 
     bool Firmware_OTA_Unsubscribe()
     {
-        Serial.println("Firmware_OTA_Unsubscribe");
+        // Serial.println("Firmware_OTA_Unsubscribe");
 
         // ReSharper disable once CppDFAConstantConditions
         if (m_changed_buffer_size)
@@ -456,7 +456,7 @@ private:
     bool Publish_Chunk_Request(size_t const& request_id, size_t const& request_chunk)
     {
         (void)request_id; // v3 token-based API doesn't use request_id in the topic
-        Serial.println("Publish_Chunk_Request");
+        // Serial.println("Publish_Chunk_Request");
 
         if (Helper::stringIsNullorEmpty(m_deviceId) ||
             Helper::stringIsNullorEmpty(m_fw_title) ||
@@ -482,7 +482,7 @@ private:
 
     void Request_Timeout()
     {
-        Serial.println("Request_Timeout");
+        // Serial.println("Request_Timeout");
         Logger::printfln(NO_SHARED_ATTRS_REQUEST_RESPONSE);
         // ReSharper disable once CppExpressionWithoutSideEffects
         Firmware_Send_State(FW_STATE_FAILED, NO_SHARED_ATTRS_REQUEST_RESPONSE);
@@ -490,11 +490,11 @@ private:
 
     void Firmware_Shared_Attribute_Received(JsonObjectConst const& data)
     {
-        Serial.println("Firmware_Shared_Attribute_Received");
+        // Serial.println("Firmware_Shared_Attribute_Received");
 
         // Print JSON object to Serial
-        serializeJson(data, Serial);
-        Serial.println(); // newline for readability
+        // serializeJson(data, Serial);
+        // Serial.println(); // newline for readability
 
         if (!data.containsKey(FW_VER_KEY) || !data.containsKey(FW_TITLE_KEY) ||
             !data.containsKey(FW_CHKS_KEY) || !data.containsKey(FW_CHKS_ALGO_KEY) ||
